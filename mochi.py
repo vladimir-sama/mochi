@@ -82,7 +82,7 @@ def command_touch() -> None:
         else:
             print(f'[violet]Server replied with code {response.status_code}[/violet]')
     except Exception as error:
-        print(f'[pink]Error:[/] {error}[/pink]')
+        print(f'[pink]Error: {error}[/pink]')
 
 
 def command_list() -> None:
@@ -100,7 +100,7 @@ def command_list() -> None:
         else:
             print(f'[violet]Server error: {response.status_code}[/violet]')
     except Exception as error:
-        print(f'[pink]Error:[/] {error}[/pink]')
+        print(f'[pink]Error: {error}[/pink]')
 
 
 def command_fetch(package_name: str) -> None:
@@ -149,7 +149,7 @@ def main() -> None:
         package: str = sys.argv[2]
         command_fetch(package)
     else:
-        print(f'[violet]Unknown command:[/] {command}[/violet]')
+        print(f'[violet]Unknown command: {command}[/violet]')
 
 
 if __name__ == '__main__':

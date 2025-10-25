@@ -26,7 +26,7 @@ def load_configuration(file_path: str) -> configparser.ConfigParser:
         configuration['mochi'] = {
             'server': 'https://127.0.0.1:8080',
             'token': '0000',
-            'verify_ssl': False
+            'verify_ssl': 'false'
         }
         with open(file_path, 'w') as config_file:
             configuration.write(config_file)
@@ -94,12 +94,30 @@ def download_file(url: str, file_path: str, sha1_expected: Optional[str] = None)
     return True
 
 # --- Command Implementations ---
+
 def command_touch() -> None:
     '''Ping the server to check if it is online.'''
     try:
-        response = requests.get(f'{server_url}/api/touch')
+        response = requests.get(f'{server_url}/api/touch', verify=verify_ssl)
         if response.status_code == 200:
             print('[bright_blue]✨ Server online! ✨[/bright_blue]')
+            print(f'[magenta]💖 {server_url} 💖[/magenta]')
+        else:
+            print(f'[violet]Server replied with code {response.status_code}[/violet]')
+    except Exception as error:
+        print(f'[pink]Error: {error}[/pink]')
+
+
+def command_version() -> None:
+    '''Ping the server to check if versions match.'''
+    try:
+        response = requests.get(f'{server_url}/api/version', verify=verify_ssl)
+        if response.status_code == 200:
+            manifest: dict[str, Any] = response.json()
+            if version == manifest.get('version'):
+                print('[bright_blue]✨ Version match! ✨[/bright_blue]')
+            else:
+                print(f'[magenta]💔 Version mismatch!\nLocal:  {version}\nServer: {manifest.get("version")}[/magenta]')
         else:
             print(f'[violet]Server replied with code {response.status_code}[/violet]')
     except Exception as error:
@@ -146,6 +164,37 @@ def command_fetch(package_name: str) -> None:
         print(f'[bright_blue]Done! → {file_path}[/bright_blue]')
 
 
+def command_token(new_token: str) -> None:
+    '''Set or update the API token in the configuration file.'''
+    config_path: str = os.path.join(executable_directory, 'mochi.ini')
+    configuration: configparser.ConfigParser = load_configuration(config_path)
+
+    if 'mochi' not in configuration:
+        configuration['mochi'] = {}
+
+    configuration['mochi']['token'] = new_token
+
+    with open(config_path, 'w') as config_file:
+        configuration.write(config_file)
+
+    print(f'[bright_blue]Token updated![/bright_blue] → {new_token}')
+
+
+def command_server(new_address: str) -> None:
+    '''Set or update the API server address in the configuration file.'''
+    config_path: str = os.path.join(executable_directory, 'mochi.ini')
+    configuration: configparser.ConfigParser = load_configuration(config_path)
+
+    if 'mochi' not in configuration:
+        configuration['mochi'] = {}
+
+    configuration['mochi']['server'] = new_address
+
+    with open(config_path, 'w') as config_file:
+        configuration.write(config_file)
+
+    print(f'[bright_blue]Server updated![/bright_blue] → {new_address}')
+
 # --- CLI Entry Point ---
 def main() -> None:
     '''Main CLI command parser.'''
@@ -153,6 +202,9 @@ def main() -> None:
         print('[magenta]🎀 Mochi CLI 🎀[/magenta]')
         print('[cyan]Usage:[/cyan]')
         print('  mochi touch                 # Ping server')
+        print('  mochi version               # Version compare')
+        print('  mochi token TOKEN           # Set token')
+        print('  mochi server SERVER         # Set server URL')
         print('  mochi list                  # List packages')
         print('  mochi fetch PACKAGE         # Fetch package')
         return
@@ -161,6 +213,18 @@ def main() -> None:
 
     if command == 'touch':
         command_touch()
+    elif command == 'token':
+        if len(sys.argv) < 3:
+            print('[pink]Missing token value[/pink]')
+            return
+        new_token: str = sys.argv[2]
+        command_token(new_token)
+    elif command == 'server':
+        if len(sys.argv) < 3:
+            print('[pink]Missing server value[/pink]')
+            return
+        new_address: str = sys.argv[2]
+        command_server(new_address)
     elif command == 'list':
         command_list()
     elif command == 'fetch':
@@ -169,6 +233,8 @@ def main() -> None:
             return
         package: str = sys.argv[2]
         command_fetch(package)
+    elif command == 'version':
+        command_version()
     else:
         print(f'[violet]Unknown command: {command}[/violet]')
 

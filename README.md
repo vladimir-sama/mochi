@@ -1,5 +1,5 @@
 # 🎀 Mochi CLI 🎀
-**Version 2025.10.21**
+**Version 2025.10.25**
 
 A tiny, cross-platform package fetcher and transfer tool —  
 built with Python and Flask, wrapped in a pastel shell 💖

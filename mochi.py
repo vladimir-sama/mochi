@@ -17,7 +17,7 @@ from rich.progress import (
 from rich import print
 
 # --- Initialization ---
-version : str = '2025.10.21'
+version : str = '2025.10.25'
 file_directory: str = os.path.dirname(os.path.realpath(__file__))
 executable_directory: str = file_directory
 
@@ -28,6 +28,7 @@ config: configparser.ConfigParser = configparser.ConfigParser()
 config.read(os.path.join(executable_directory, 'mochi.ini'))
 server_url: str = config.get('mochi', 'server', fallback='http://127.0.0.1:8080')
 token: Optional[str] = config.get('mochi', 'token', fallback=None)
+verify_ssl: bool = config.getboolean('mochi', 'verify_ssl', fallback=True)
 headers: dict = {'Authorization': f'Bearer {token}'} if token else {}
 
 # --- Utility Functions ---
@@ -42,7 +43,7 @@ def compute_sha1_hash(file_path: str) -> str:
 
 def download_file(url: str, file_path: str, sha1_expected: Optional[str] = None) -> bool:
     '''Download a file with a kawaii pastel-style rich progress bar.'''
-    response = requests.get(url, stream=True, headers=headers)
+    response = requests.get(url, stream=True, headers=headers, verify=verify_ssl)
 
     if response.status_code != 200:
         print(f'[magenta]Download failed: HTTP {response.status_code}[/magenta]')
@@ -88,7 +89,7 @@ def command_touch() -> None:
 def command_list() -> None:
     '''Retrieve and display a list of available packages.'''
     try:
-        response = requests.get(f'{server_url}/api/list')
+        response = requests.get(f'{server_url}/api/list', headers=headers, verify=verify_ssl)
         if response.status_code == 200:
             packages: List[str] = response.json()
             if not packages:
@@ -106,7 +107,7 @@ def command_list() -> None:
 def command_fetch(package_name: str) -> None:
     '''Fetch a package.'''
     endpoint: str = f'{server_url}/api/get/{package_name}'
-    response = requests.get(endpoint)
+    response = requests.get(endpoint, headers=headers, verify=verify_ssl)
 
     if response.status_code != 200:
         print(f'[violet]💔 Package not found or server error ({response.status_code})[/violet]')

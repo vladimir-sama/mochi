@@ -144,6 +144,13 @@ ENV/
 env.bak/
 venv.bak/
 
+# MOCHI
+.venv_linux/
+.venv_mac/
+.venv_windows/
+.venv_server/
+.vscode/
+
 # Spyder project settings
 .spyderproject
 .spyproject

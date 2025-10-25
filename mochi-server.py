@@ -31,14 +31,14 @@ KEY_FILE: str = os.path.join(runtime_directory, 'key.pem')
 
 # --- Configuration Handling ---
 
-def load_configuration(file_path: str = 'server.ini') -> configparser.ConfigParser:
+def load_configuration(file_path: str = os.path.join(runtime_directory, 'server.ini')) -> configparser.ConfigParser:
     '''Always load the configuration from disk. Creates a default one if missing.'''
     configuration: configparser.ConfigParser = configparser.ConfigParser()
 
     if not os.path.isfile(file_path):
         configuration['server'] = {
             'port': '8080',
-            'token': ''
+            'token': '0000'
         }
         with open(file_path, 'w') as config_file:
             configuration.write(config_file)

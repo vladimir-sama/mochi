@@ -5,7 +5,7 @@ import requests
 import hashlib
 import configparser
 import json
-from typing import Optional, Dict, Any, List
+from typing import Optional, Any
 from rich.progress import (
     Progress,
     BarColumn,
@@ -16,6 +16,26 @@ from rich.progress import (
 )
 from rich import print
 
+# --- Configuration Handling ---
+
+def load_configuration(file_path: str) -> configparser.ConfigParser:
+    '''Always load the configuration from disk. Creates a default one if missing.'''
+    configuration: configparser.ConfigParser = configparser.ConfigParser()
+
+    if not os.path.isfile(file_path):
+        configuration['mochi'] = {
+            'server': 'https://127.0.0.1:8080',
+            'token': '0000',
+            'verify_ssl': False
+        }
+        with open(file_path, 'w') as config_file:
+            configuration.write(config_file)
+    else:
+        configuration.read(file_path)
+
+    return configuration
+
+
 # --- Initialization ---
 version : str = '2025.10.25'
 file_directory: str = os.path.dirname(os.path.realpath(__file__))
@@ -24,14 +44,14 @@ executable_directory: str = file_directory
 if getattr(sys, 'frozen', False):
     executable_directory = os.path.dirname(sys.executable)
 
-config: configparser.ConfigParser = configparser.ConfigParser()
-config.read(os.path.join(executable_directory, 'mochi.ini'))
-server_url: str = config.get('mochi', 'server', fallback='http://127.0.0.1:8080')
+config: configparser.ConfigParser = load_configuration(os.path.join(executable_directory, 'mochi.ini'))
+server_url: str = config.get('mochi', 'server', fallback='https://127.0.0.1:8080')
 token: Optional[str] = config.get('mochi', 'token', fallback=None)
 verify_ssl: bool = config.getboolean('mochi', 'verify_ssl', fallback=True)
 headers: dict = {'Authorization': f'Bearer {token}'} if token else {}
 
 # --- Utility Functions ---
+
 def compute_sha1_hash(file_path: str) -> str:
     '''Compute the SHA1 hash of a file.'''
     hash_obj = hashlib.sha1()
@@ -91,7 +111,7 @@ def command_list() -> None:
     try:
         response = requests.get(f'{server_url}/api/list', headers=headers, verify=verify_ssl)
         if response.status_code == 200:
-            packages: List[str] = response.json()
+            packages: list[str] = response.json()
             if not packages:
                 print('[pink]No packages found.[/pink]')
                 return
@@ -113,7 +133,7 @@ def command_fetch(package_name: str) -> None:
         print(f'[violet]💔 Package not found or server error ({response.status_code})[/violet]')
         return
 
-    manifest: Dict[str, Any] = response.json()
+    manifest: dict[str, Any] = response.json()
     file_name: str = manifest['filename']
     sha1_hash: Optional[str] = manifest.get('sha1')
     download_url: str = f'{server_url}/api/download/{package_name}'

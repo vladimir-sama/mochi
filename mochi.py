@@ -1,10 +1,8 @@
 import os
 import sys
-import shutil
 import requests
 import hashlib
 import configparser
-import json
 from typing import Optional, Any
 from rich.progress import (
     Progress,
@@ -18,7 +16,7 @@ from rich import print
 
 # --- Configuration Handling ---
 
-def load_configuration(file_path: str) -> configparser.ConfigParser:
+def load_configuration(file_path:str) -> configparser.ConfigParser:
     '''Always load the configuration from disk. Creates a default one if missing.'''
     configuration: configparser.ConfigParser = configparser.ConfigParser()
 
@@ -37,22 +35,23 @@ def load_configuration(file_path: str) -> configparser.ConfigParser:
 
 
 # --- Initialization ---
-version : str = '2025.10.25'
-file_directory: str = os.path.dirname(os.path.realpath(__file__))
-executable_directory: str = file_directory
+
+version : str = '2025.10.26'
+file_directory : str = os.path.dirname(os.path.realpath(__file__))
+executable_directory : str = file_directory
 
 if getattr(sys, 'frozen', False):
     executable_directory = os.path.dirname(sys.executable)
 
-config: configparser.ConfigParser = load_configuration(os.path.join(executable_directory, 'mochi.ini'))
-server_url: str = config.get('mochi', 'server', fallback='https://127.0.0.1:8080')
-token: Optional[str] = config.get('mochi', 'token', fallback=None)
-verify_ssl: bool = config.getboolean('mochi', 'verify_ssl', fallback=True)
-headers: dict = {'Authorization': f'Bearer {token}'} if token else {}
+config : configparser.ConfigParser = load_configuration(os.path.join(executable_directory, 'mochi.ini'))
+server_url : str = config.get('mochi', 'server', fallback='https://127.0.0.1:8080')
+token : Optional[str] = config.get('mochi', 'token', fallback=None)
+verify_ssl : bool = config.getboolean('mochi', 'verify_ssl', fallback=True)
+headers : dict = {'Authorization': f'Bearer {token}'} if token else {}
 
 # --- Utility Functions ---
 
-def compute_sha1_hash(file_path: str) -> str:
+def compute_sha1_hash(file_path:str) -> str:
     '''Compute the SHA1 hash of a file.'''
     hash_obj = hashlib.sha1()
     with open(file_path, 'rb') as file:
@@ -61,15 +60,15 @@ def compute_sha1_hash(file_path: str) -> str:
     return hash_obj.hexdigest()
 
 
-def download_file(url: str, file_path: str, sha1_expected: Optional[str] = None) -> bool:
+def download_file(url:str, file_path:str, sha1_expected:Optional[str] = None) -> bool:
     '''Download a file with a kawaii pastel-style rich progress bar.'''
-    response = requests.get(url, stream=True, headers=headers, verify=verify_ssl)
+    response : requests.Response = requests.get(url, stream=True, headers=headers, verify=verify_ssl)
 
     if response.status_code != 200:
         print(f'[magenta]Download failed: HTTP {response.status_code}[/magenta]')
         return False
 
-    total_size: int = int(response.headers.get('content-length', 0))
+    total_size : int = int(response.headers.get('content-length', 0))
     with Progress(
         TextColumn('[cyan]🌸 Downloading…[/cyan]'),
         BarColumn(bar_width=None, complete_style='bright_blue', finished_style='violet', pulse_style='pink'),
@@ -85,7 +84,7 @@ def download_file(url: str, file_path: str, sha1_expected: Optional[str] = None)
                     progress.update(task_id, advance=len(chunk))
 
     if sha1_expected:
-        local_hash: str = compute_sha1_hash(file_path)
+        local_hash : str = compute_sha1_hash(file_path)
         if local_hash != sha1_expected:
             print(f'[magenta]💔 SHA1 mismatch!\nExpected: {sha1_expected}\nGot:      {local_hash}[/magenta]')
             os.remove(file_path)
@@ -98,7 +97,7 @@ def download_file(url: str, file_path: str, sha1_expected: Optional[str] = None)
 def command_touch() -> None:
     '''Ping the server to check if it is online.'''
     try:
-        response = requests.get(f'{server_url}/api/touch', verify=verify_ssl)
+        response : requests.Response = requests.get(f'{server_url}/api/touch', verify=verify_ssl)
         if response.status_code == 200:
             print('[bright_blue]✨ Server online! ✨[/bright_blue]')
             print(f'[magenta]💖 {server_url} 💖[/magenta]')
@@ -111,9 +110,9 @@ def command_touch() -> None:
 def command_version() -> None:
     '''Ping the server to check if versions match.'''
     try:
-        response = requests.get(f'{server_url}/api/version', verify=verify_ssl)
+        response : requests.Response = requests.get(f'{server_url}/api/version', verify=verify_ssl)
         if response.status_code == 200:
-            manifest: dict[str, Any] = response.json()
+            manifest : dict[str, Any] = response.json()
             if version == manifest.get('version'):
                 print('[bright_blue]✨ Version match! ✨[/bright_blue]')
             else:
@@ -127,9 +126,9 @@ def command_version() -> None:
 def command_list() -> None:
     '''Retrieve and display a list of available packages.'''
     try:
-        response = requests.get(f'{server_url}/api/list', headers=headers, verify=verify_ssl)
+        response : requests.Response = requests.get(f'{server_url}/api/list', headers=headers, verify=verify_ssl)
         if response.status_code == 200:
-            packages: list[str] = response.json()
+            packages : list[str] = response.json()
             if not packages:
                 print('[pink]No packages found.[/pink]')
                 return
@@ -142,21 +141,21 @@ def command_list() -> None:
         print(f'[pink]Error: {error}[/pink]')
 
 
-def command_fetch(package_name: str) -> None:
+def command_fetch(package_name:str) -> None:
     '''Fetch a package.'''
-    endpoint: str = f'{server_url}/api/get/{package_name}'
-    response = requests.get(endpoint, headers=headers, verify=verify_ssl)
+    endpoint : str = f'{server_url}/api/get/{package_name}'
+    response : requests.Response = requests.get(endpoint, headers=headers, verify=verify_ssl)
 
     if response.status_code != 200:
         print(f'[violet]💔 Package not found or server error ({response.status_code})[/violet]')
         return
 
-    manifest: dict[str, Any] = response.json()
-    file_name: str = manifest['filename']
-    sha1_hash: Optional[str] = manifest.get('sha1')
-    download_url: str = f'{server_url}/api/download/{package_name}'
+    manifest : dict[str, Any] = response.json()
+    file_name : str = manifest['filename']
+    sha1_hash : Optional[str] = manifest.get('sha1')
+    download_url : str = f'{server_url}/api/download/{package_name}'
 
-    file_path: str = os.path.join(os.getcwd(), file_name)
+    file_path : str = os.path.join(os.getcwd(), file_name)
 
     print(f'[cyan]🌸 Fetching {package_name}…[/cyan]')
 
@@ -164,10 +163,10 @@ def command_fetch(package_name: str) -> None:
         print(f'[bright_blue]Done! → {file_path}[/bright_blue]')
 
 
-def command_token(new_token: str) -> None:
+def command_token(new_token:str) -> None:
     '''Set or update the API token in the configuration file.'''
-    config_path: str = os.path.join(executable_directory, 'mochi.ini')
-    configuration: configparser.ConfigParser = load_configuration(config_path)
+    config_path : str = os.path.join(executable_directory, 'mochi.ini')
+    configuration : configparser.ConfigParser = load_configuration(config_path)
 
     if 'mochi' not in configuration:
         configuration['mochi'] = {}
@@ -180,10 +179,10 @@ def command_token(new_token: str) -> None:
     print(f'[bright_blue]Token updated![/bright_blue] → {new_token}')
 
 
-def command_server(new_address: str) -> None:
+def command_server(new_address:str) -> None:
     '''Set or update the API server address in the configuration file.'''
-    config_path: str = os.path.join(executable_directory, 'mochi.ini')
-    configuration: configparser.ConfigParser = load_configuration(config_path)
+    config_path : str = os.path.join(executable_directory, 'mochi.ini')
+    configuration : configparser.ConfigParser = load_configuration(config_path)
 
     if 'mochi' not in configuration:
         configuration['mochi'] = {}
@@ -217,13 +216,13 @@ def main() -> None:
         if len(sys.argv) < 3:
             print('[pink]Missing token value[/pink]')
             return
-        new_token: str = sys.argv[2]
+        new_token : str = sys.argv[2]
         command_token(new_token)
     elif command == 'server':
         if len(sys.argv) < 3:
             print('[pink]Missing server value[/pink]')
             return
-        new_address: str = sys.argv[2]
+        new_address : str = sys.argv[2]
         command_server(new_address)
     elif command == 'list':
         command_list()
@@ -231,7 +230,7 @@ def main() -> None:
         if len(sys.argv) < 3:
             print('[pink]Missing package name[/pink]')
             return
-        package: str = sys.argv[2]
+        package : str = sys.argv[2]
         command_fetch(package)
     elif command == 'version':
         command_version()
